@@ -1,5 +1,9 @@
 Project Overview -
-Create an site that displays arb for any token
+Create an site that displays arb for any token and executes it.
+We monitor the Binance prices and uniswap pools for any possible price discrepancy.
+
+once there is an arbitrage opportunity we use AAVE loans to borrow the currency we need to swap and do the inverse on binance(where we have margin)
+We then close the trade by transfering the tokens we bought/sold from/to Binance.
 
 Frontend-
 [Use Next.js to create](https://nextjs.org/)
