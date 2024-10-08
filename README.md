@@ -22,7 +22,7 @@ If we want to get more arbitrage opportunities then we can scan the mempool(usin
 Open question: in what language do we do the arbitrage calculations(whether to buy, and how much and what should be the gas fee, etc)
 and how do we pass the data into it(this is not trivial as making a json file and saving it and then opening it is pretty time consuming, which is a huge consideration) -
 
-Answer: Use Python for calculations and use Redis to pass data in
+Answer: Use Python for calculations and use Supabase to pass data in
 
 
 
