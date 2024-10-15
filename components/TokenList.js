@@ -8,7 +8,7 @@ const TokenList = () => {
   // Fetch arbitrage opportunities
   const fetchTokens = async () => {
     try {
-      const response = await axios.get("/api/getArbOpportunities");
+      const response = await axios.get("/api/getArbOpportunities");  // Backend route for opportunities
       setTokens(response.data);
     } catch (error) {
       console.error("Error fetching tokens", error);
@@ -19,28 +19,46 @@ const TokenList = () => {
     fetchTokens();
   }, []);
 
+  // Execute trade and display price difference
+  const executeTrade = async (tokenPair) => {
+    try {
+      const response = await axios.post("/api/executeTrade", { pair: tokenPair });
+      if (response.data.success) {
+        alert(`Trade executed successfully! Price difference: $${response.data.priceDifference}`);
+      } else {
+        alert(response.data.message);
+      }
+    } catch (error) {
+      console.error("Error executing trade", error);
+      alert("Trade execution failed.");
+    }
+  };
+
   return (
     <div className="container">
-      <h2 className="text-center">Arbitrage Opportunities</h2>
-      <table className="table">
+      <h2 className="text-2xl font-semibold mb-4">Arbitrage Opportunities</h2>
+      <table className="table-auto w-full">
         <thead>
           <tr>
-            <th>Token Pair</th>
-            <th>Uniswap Price</th>
-            <th>Binance Price</th>
-            <th>Profit %</th>
-            <th>Action</th>
+            <th className="px-4 py-2">Token Pair</th>
+            <th className="px-4 py-2">Uniswap Price</th>
+            <th className="px-4 py-2">Binance Price</th>
+            <th className="px-4 py-2">Profit %</th>
+            <th className="px-4 py-2">Action</th>
           </tr>
         </thead>
         <tbody>
           {tokens.map((token, index) => (
             <tr key={index}>
-              <td>{token.pair}</td>
-              <td>{token.uniswapPrice}</td>
-              <td>{token.binancePrice}</td>
-              <td>{token.profitPercentage}</td>
-              <td>
-                <button className="btn btn-success" onClick={() => executeTrade(token.pair)}>
+              <td className="border px-4 py-2">{token.pair}</td>
+              <td className="border px-4 py-2">${token.uniswapPrice}</td>
+              <td className="border px-4 py-2">${token.binancePrice}</td>
+              <td className="border px-4 py-2">{token.profitPercentage}%</td>
+              <td className="border px-4 py-2">
+                <button
+                  className="btn btn-success bg-green-500 text-white px-4 py-2 rounded"
+                  onClick={() => executeTrade(token.pair)}
+                >
                   Execute Trade
                 </button>
               </td>
@@ -50,16 +68,6 @@ const TokenList = () => {
       </table>
     </div>
   );
-};
-
-const executeTrade = async (tokenPair) => {
-  try {
-    const response = await axios.post("/api/executeTrade", { pair: tokenPair });
-    alert(`Trade executed successfully! Profit: ${response.data.profit}`);
-  } catch (error) {
-    console.error("Error executing trade", error);
-    alert("Trade execution failed.");
-  }
 };
 
 export default TokenList;
