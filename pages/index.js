@@ -1,22 +1,25 @@
 // pages/index.js
-import Link from 'next/link';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer'; // Import the Footer component
+import React from "react";
+import Navbar from "../components/Navbar";
+import TokenList from "../components/TokenList";
 
-export default function Home() {
+const IndexPage = () => {
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
+    <div className="min-h-screen bg-gray-100">
       <Navbar />
-      <main className="container mx-auto flex-grow px-6 py-16 text-center">
-        <h1 className="text-6xl font-bold mb-6">Welcome to the Arbitrage Dashboard</h1>
-        <p className="text-lg mb-8">
-          Track and execute arbitrage opportunities for tokens across Uniswap and Binance.
-        </p>
-        <Link href="/dashboard" className="inline-block px-8 py-4 bg-pine text-white rounded hover:bg-opacity-80 transition duration-200">
-          Go to Dashboard
-        </Link>
-      </main>
-      <Footer />
+      <div className="container mx-auto px-4 py-10">
+        <h1 className="text-4xl font-bold text-center text-green-800 mb-8">
+          Welcome to the Arbitrage Dashboard
+        </h1>
+        <div className="bg-white shadow-lg rounded-lg p-6">
+          <h2 className="text-2xl font-semibold mb-4 text-center">
+            Current Arbitrage Opportunities
+          </h2>
+          <TokenList />
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default IndexPage;

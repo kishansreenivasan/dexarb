@@ -1,15 +1,22 @@
+/* styles/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Additional global styles */
 body {
-  font-family: 'Inter', sans-serif; /* Use a clean font for a modern look */
+  font-family: Arial, sans-serif;
+  background-color: #f8f9fa;
 }
 
-h1 {
-  color: #fff; /* White for the heading */
+h2 {
+  margin-top: 20px;
 }
 
-p {
-  color: #ddd; /* Lighter gray for better readability */
+.table {
+  margin-top: 20px;
+}
+
+.navbar {
+  margin-bottom: 20px;
 }
