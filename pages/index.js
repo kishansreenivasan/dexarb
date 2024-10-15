@@ -1,7 +1,7 @@
 // pages/index.js
 import React from "react";
 import Navbar from "../components/Navbar";
-import TokenList from "../components/TokenList";
+import TokenList from "../components/Tokenlist";
 
 const IndexPage = () => {
   return (
