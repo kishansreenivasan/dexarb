@@ -1,20 +1,22 @@
 // pages/index.js
-import React from "react";
-import Navbar from "../components/Navbar";
+import Link from 'next/link';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer'; // Import the Footer component
 
-const Home = () => {
+export default function Home() {
   return (
-    <div>
+    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
       <Navbar />
-      <div className="container text-center" style={{ marginTop: "50px" }}>
-        <h1>Welcome to Arb Finder</h1>
-        <p>Monitor arbitrage opportunities and execute profitable trades.</p>
-        <a href="/dashboard" className="btn btn-primary">
+      <main className="container mx-auto flex-grow px-6 py-16 text-center">
+        <h1 className="text-6xl font-bold mb-6">Welcome to the Arbitrage Dashboard</h1>
+        <p className="text-lg mb-8">
+          Track and execute arbitrage opportunities for tokens across Uniswap and Binance.
+        </p>
+        <Link href="/dashboard" className="inline-block px-8 py-4 bg-pine text-white rounded hover:bg-opacity-80 transition duration-200">
           Go to Dashboard
-        </a>
-      </div>
+        </Link>
+      </main>
+      <Footer />
     </div>
   );
-};
-
-export default Home;
+}

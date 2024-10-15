@@ -1,14 +1,23 @@
-
-import React from "react";
+// components/Navbar.js
+import Link from 'next/link';
 
 const Navbar = () => {
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-light">
-      <a className="navbar-brand" href="/">Arb Finder</a>
-      <div className="collapse navbar-collapse">
-        <ul className="navbar-nav mr-auto">
-          <li className="nav-item active">
-            <a className="nav-link" href="/dashboard">Dashboard</a>
+    <nav className="bg-pine p-4 shadow-md">
+      <div className="container mx-auto flex justify-between items-center">
+        <div className="text-white font-bold text-xl">
+          Arbitrage Dashboard
+        </div>
+        <ul className="flex space-x-4">
+          <li>
+            <Link href="/" className="text-gray-300 hover:text-white transition duration-200">
+              Home
+            </Link>
+          </li>
+          <li>
+            <Link href="/dashboard" className="text-gray-300 hover:text-white transition duration-200">
+              Dashboard
+            </Link>
           </li>
         </ul>
       </div>
