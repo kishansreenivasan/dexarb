@@ -1,0 +1,22 @@
+/* styles/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Additional global styles */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f8f9fa;
+}
+
+h2 {
+  margin-top: 20px;
+}
+
+.table {
+  margin-top: 20px;
+}
+
+.navbar {
+  margin-bottom: 20px;
+}
