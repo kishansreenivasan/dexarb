@@ -1,9 +1,14 @@
 {
   "dependencies": {
+    "@aave/protocol-js": "^2.2.0",
+    "@uniswap/sdk-core": "^5.9.0",
+    "@uniswap/v3-sdk": "^3.18.1",
     "autoprefixer": "^10.4.20",
     "axios": "^1.7.7",
+    "binance-api-node": "^0.12.9",
     "bootstrap": "^5.3.3",
     "child_process": "^1.0.2",
+    "ethers": "^6.13.4",
     "express": "^4.21.1",
     "next": "^14.2.15",
     "postcss": "^8.4.47",
@@ -11,6 +16,8 @@
     "react-bootstrap": "^2.10.5",
     "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.14",
+    "uniswap-sdk": "^3.0.2",
+    "web3": "^4.15.0",
     "ws": "^8.18.0"
   },
   "scripts": {
