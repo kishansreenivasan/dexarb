@@ -5,62 +5,18 @@ import aiohttp
 import time
 from datetime import datetime
 from typing import Dict, Set
+from decimal import Decimal, ROUND_HALF_UP
+import decimal
 
-class CryptoArbitrageTracker:
+class EnhancedCryptoArbitrageTracker:
     def __init__(self):
         self.price_data = {}
         self.binance_pairs: Set[str] = set()
         self.coinbase_pairs: Set[str] = set()
-        self.min_price_diff = 0.5  # Minimum price difference to report (%)
-
-    async def fetch_trading_pairs(self):
-        """Fetch available trading pairs from both exchanges"""
-        async with aiohttp.ClientSession() as session:
-            # Fetch Binance.US pairs
-            try:
-                async with session.get('https://api.binance.us/api/v3/exchangeInfo') as response:
-                    data = await response.json()
-                    # Print first few symbols for debugging
-                    print("\nBinance.US Sample Response:")
-                    if 'symbols' in data:
-                        print(json.dumps(data['symbols'][:1], indent=2))
-                        self.binance_pairs = {
-                            symbol['symbol'] 
-                            for symbol in data['symbols']
-                            if symbol['status'] == 'TRADING'  # Only include active pairs
-                        }
-                    print(f"Fetched {len(self.binance_pairs)} Binance.US pairs")
-                    if self.binance_pairs:
-                        print("Sample Binance pairs:", list(self.binance_pairs)[:5])
-            except Exception as e:
-                print(f"Error fetching Binance.US pairs: {e}")
-                self.binance_pairs = set()
-
-            # Fetch Coinbase pairs
-            try:
-                async with session.get('https://api.exchange.coinbase.com/products') as response:
-                    data = await response.json()
-                    print("\nCoinbase Sample Response:")
-                    if data:
-                        print(json.dumps(data[:1], indent=2))
-                        self.coinbase_pairs = {
-                            f"{product['base_currency']}{product['quote_currency']}"
-                            for product in data
-                            if product['status'] == 'online'  # Only include active pairs
-                        }
-                    print(f"Fetched {len(self.coinbase_pairs)} Coinbase pairs")
-                    if self.coinbase_pairs:
-                        print("Sample Coinbase pairs:", list(self.coinbase_pairs)[:5])
-            except Exception as e:
-                print(f"Error fetching Coinbase pairs: {e}")
-                self.coinbase_pairs = set()
-
-        # Find common pairs
-        common_pairs = self.binance_pairs.intersection(self.coinbase_pairs)
-        print(f"\nFound {len(common_pairs)} common pairs")
-        if common_pairs:
-            print("Sample common pairs:", list(common_pairs)[:5])
-        return common_pairs
+        self.min_price_diff = 0.001  # Now detecting 0.001% differences
+        self.opportunities_found = 0
+        self.last_opportunities = []
+        self.max_opportunity_history = 1000
 
     def normalize_pair(self, pair: str, exchange: str) -> str:
         """Normalize trading pair format between exchanges"""
@@ -69,35 +25,94 @@ class CryptoArbitrageTracker:
         # For Coinbase, convert from BASE-QUOTE to BASEQUOTE format
         return pair.replace('-', '')
 
+    async def fetch_trading_pairs(self):
+        """Fetch available trading pairs from both exchanges with expanded criteria"""
+        async with aiohttp.ClientSession() as session:
+            # Fetch Binance.US pairs with expanded criteria
+            try:
+                async with session.get('https://api.binance.us/api/v3/exchangeInfo') as response:
+                    data = await response.json()
+                    self.binance_pairs = {
+                        symbol['symbol'] 
+                        for symbol in data.get('symbols', [])
+                        if symbol['status'] == 'TRADING'
+                        and not symbol.get('permissions', ['NONE'])[0] == 'CONDITIONAL_TRADING'
+                    }
+                    print(f"Fetched {len(self.binance_pairs)} Binance.US pairs")
+            except Exception as e:
+                print(f"Error fetching Binance.US pairs: {e}")
+                self.binance_pairs = set()
+
+            # Fetch Coinbase pairs with expanded criteria
+            try:
+                async with session.get('https://api.exchange.coinbase.com/products') as response:
+                    data = await response.json()
+                    self.coinbase_pairs = {
+                        f"{product['base_currency']}{product['quote_currency']}"
+                        for product in data
+                        if product['status'] == 'online'
+                        and product.get('trading_disabled') is False
+                        and product.get('cancel_only') is False
+                    }
+                    print(f"Fetched {len(self.coinbase_pairs)} Coinbase pairs")
+            except Exception as e:
+                print(f"Error fetching Coinbase pairs: {e}")
+                self.coinbase_pairs = set()
+
+        common_pairs = self.binance_pairs.intersection(self.coinbase_pairs)
+        print(f"\nFound {len(common_pairs)} common pairs")
+        return common_pairs
+
     def calculate_price_difference(self, symbol: str) -> dict:
-        """Calculate price difference percentage between exchanges"""
+        """Calculate precise price difference using Decimal for higher accuracy"""
         data = self.price_data.get(symbol, {})
         if 'binance' in data and 'coinbase' in data:
-            binance_price = data['binance']['price']
-            coinbase_price = data['coinbase']['price']
-            if binance_price and coinbase_price:
-                diff_pct = ((coinbase_price - binance_price) / binance_price) * 100
-                return {
-                    'symbol': symbol,
-                    'binance_price': binance_price,
-                    'coinbase_price': coinbase_price,
-                    'difference': diff_pct,
-                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-                }
+            try:
+                binance_price = Decimal(str(data['binance']['price']))
+                coinbase_price = Decimal(str(data['coinbase']['price']))
+                
+                if binance_price and coinbase_price:
+                    diff_pct = ((coinbase_price - binance_price) / binance_price * Decimal('100')).quantize(
+                        Decimal('0.00000001'), rounding=ROUND_HALF_UP
+                    )
+                    
+                    timestamp = datetime.fromtimestamp(data['binance']['timestamp'] / 1000)
+                    latency = abs(data['binance']['timestamp'] - data['coinbase']['timestamp'])
+                    
+                    return {
+                        'symbol': symbol,
+                        'binance_price': float(binance_price),
+                        'coinbase_price': float(coinbase_price),
+                        'difference': float(diff_pct),
+                        'timestamp': timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3],
+                        'latency_ms': latency
+                    }
+            except (ValueError, TypeError, decimal.InvalidOperation) as e:
+                print(f"Error calculating price difference for {symbol}: {e}")
         return None
 
     def print_opportunity(self, data: dict):
-        """Print arbitrage opportunity if difference exceeds threshold"""
+        """Print arbitrage opportunity with enhanced information"""
         if abs(data['difference']) >= self.min_price_diff:
-            print(f"\nArbitrage Opportunity Found! {data['timestamp']}")
+            self.opportunities_found += 1
+            self.last_opportunities.append(data)
+            if len(self.last_opportunities) > self.max_opportunity_history:
+                self.last_opportunities.pop(0)
+            
+            print(f"\nArbitrage Opportunity #{self.opportunities_found} | {data['timestamp']}")
             print(f"Symbol: {data['symbol']}")
-            print(f"Binance.US: ${data['binance_price']:.4f}")
-            print(f"Coinbase:   ${data['coinbase_price']:.4f}")
-            print(f"Difference: {data['difference']:.2f}%")
-            print("-" * 50)
+            print(f"Binance.US: ${data['binance_price']:.8f}")
+            print(f"Coinbase:   ${data['coinbase_price']:.8f}")
+            print(f"Difference: {data['difference']:.6f}%")
+            print(f"Data Latency: {data['latency_ms']:.2f}ms")
+            
+            standard_trade = 1000  # $1000 USD
+            potential_profit = (standard_trade * abs(data['difference'])) / 100
+            print(f"Potential Profit (${standard_trade} trade): ${potential_profit:.4f}")
+            print("-" * 60)
 
     async def handle_binance_message(self, message: str):
-        """Process Binance.US WebSocket messages"""
+        """Process Binance.US WebSocket messages with enhanced error handling"""
         try:
             data = json.loads(message)
             if data.get('e') == 'trade':
@@ -115,11 +130,13 @@ class CryptoArbitrageTracker:
                 diff_data = self.calculate_price_difference(symbol)
                 if diff_data:
                     self.print_opportunity(diff_data)
+        except json.JSONDecodeError as e:
+            print(f"JSON decode error in Binance message: {e}")
         except Exception as e:
             print(f"Error handling Binance message: {e}")
 
     async def handle_coinbase_message(self, message: str):
-        """Process Coinbase WebSocket messages"""
+        """Process Coinbase WebSocket messages with enhanced error handling"""
         try:
             data = json.loads(message)
             if data.get('type') == 'match':
@@ -129,22 +146,26 @@ class CryptoArbitrageTracker:
                 if symbol not in self.price_data:
                     self.price_data[symbol] = {}
                 
+                # Convert ISO timestamp to milliseconds
+                timestamp = datetime.strptime(data['time'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                timestamp_ms = int(timestamp.timestamp() * 1000)
+                
                 self.price_data[symbol]['coinbase'] = {
                     'price': price,
-                    'timestamp': time.time() * 1000
+                    'timestamp': timestamp_ms
                 }
 
                 diff_data = self.calculate_price_difference(symbol)
                 if diff_data:
                     self.print_opportunity(diff_data)
+        except json.JSONDecodeError as e:
+            print(f"JSON decode error in Coinbase message: {e}")
         except Exception as e:
             print(f"Error handling Coinbase message: {e}")
 
     async def binance_websocket(self, symbols: Set[str]):
         """Maintain Binance.US WebSocket connection"""
-        # Create separate streams for each symbol
         streams = [f"{symbol.lower()}@trade" for symbol in symbols]
-        # Join all streams with forward slash
         stream_path = '/'.join(streams)
         uri = f"wss://stream.binance.us:9443/ws/{stream_path}"
         
@@ -168,7 +189,6 @@ class CryptoArbitrageTracker:
             try:
                 async with websockets.connect(uri) as websocket:
                     print(f"\nConnected to Coinbase WebSocket")
-                    # Convert symbols to Coinbase format (e.g., BTCUSD -> BTC-USD)
                     formatted_symbols = [
                         f"{symbol[:-3]}-{symbol[-3:]}" 
                         for symbol in symbols
@@ -188,23 +208,39 @@ class CryptoArbitrageTracker:
                 print(f"Coinbase WebSocket error: {e}")
                 await asyncio.sleep(5)  # Wait before reconnecting
 
+    async def print_statistics(self):
+        """Periodically print trading statistics"""
+        while True:
+            await asyncio.sleep(300)  # Print stats every 5 minutes
+            if self.opportunities_found > 0:
+                print("\n=== Arbitrage Statistics ===")
+                print(f"Total Opportunities Found: {self.opportunities_found}")
+                if self.last_opportunities:
+                    recent_diffs = [abs(opp['difference']) for opp in self.last_opportunities[-100:]]
+                    avg_diff = sum(recent_diffs) / len(recent_diffs)
+                    max_diff = max(recent_diffs)
+                    print(f"Average Recent Difference: {avg_diff:.6f}%")
+                    print(f"Maximum Recent Difference: {max_diff:.6f}%")
+                print("=" * 25)
+
     async def run(self):
-        """Main execution function"""
+        """Main execution function with enhanced monitoring"""
         try:
             common_pairs = await self.fetch_trading_pairs()
             if not common_pairs:
                 print("No common pairs found. Exiting...")
                 return
             
-            # Start WebSocket connections
             await asyncio.gather(
                 self.binance_websocket(common_pairs),
-                self.coinbase_websocket(common_pairs)
+                self.coinbase_websocket(common_pairs),
+                self.print_statistics()
             )
         except Exception as e:
             print(f"Error in main execution: {e}")
 
 if __name__ == "__main__":
-    print("Starting Crypto Arbitrage Tracker...")
-    tracker = CryptoArbitrageTracker()
+    print("Starting Enhanced Crypto Arbitrage Tracker...")
+    print("Monitoring for opportunities with 0.001% or greater difference")
+    tracker = EnhancedCryptoArbitrageTracker()
     asyncio.run(tracker.run())
